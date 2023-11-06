@@ -151,6 +151,12 @@ class AnimationComponents(Component):
     def lerp(self,a, b, t):
         return (1 - t) * a + t * b
      
+    def drawSelfGui(self, imgui):
+        _, self.tempo = imgui.drag_float("Alpha Tempo", self.tempo, 1, 0, self.time[-1])
+
+        _, self.anition_start = imgui.checkbox("Animation", self.anition_start)
+        None;
+
     def update(self):
         pass
    

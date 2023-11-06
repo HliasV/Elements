@@ -9,8 +9,9 @@ import OpenGL.GL as gl;
 import Elements.pyECSS.utilities as util
 from Elements.pyECSS.System import  TransformSystem, CameraSystem
 from Elements.pyECSS.Entity import Entity
-from Elements.pyECSS.Component import BasicTransform,  RenderMesh, Keyframe, AnimationComponents
+from Elements.pyECSS.Component import BasicTransform, RenderMesh, Keyframe, AnimationComponents
 from Elements.pyECSS.Event import Event
+#from AnimationComponent import Keyframe, AnimationComponents
 
 from Elements.pyGLV.GUI.Viewer import  RenderGLStateSystem,  ImGUIecssDecorator
 from Elements.pyGLV.GL.Shader import InitGLShaderSystem, Shader, ShaderGLDecorator, RenderGLShaderSystem
@@ -139,7 +140,7 @@ def main(imguiFlag = False):
     ##########################################################
     # Instantiate a simple complete ECSS with Entities, 
     # Components, Camera, Shader, VertexArray and RenderMesh
-    #########################################################
+    ##########################################################
 
     #Material
     Mshininess = 0.4 
@@ -293,7 +294,7 @@ def main(imguiFlag = False):
         running = scene.render()
         # call the GL State render System
         scene.world.traverse_visit(renderUpdate, scene.world.root)
-        animationGUI()
+        # animationGUI()
         # ImGUI post-display calls and SDLWindow swap 
         scene.render_post()
 

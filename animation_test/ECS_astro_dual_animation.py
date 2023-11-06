@@ -348,7 +348,7 @@ def main(imguiFlag = False):
         running = scene.render()
         # call the GL State render System
         scene.world.traverse_visit(renderUpdate, scene.world.root)
-        animationGUI()
+        # animationGUI()
         # ImGUI post-display calls and SDLWindow swap 
         scene.render_post()
 
