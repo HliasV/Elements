@@ -15,6 +15,7 @@ import math
 WW = None
 WW_9 = None
 figure = None
+whichFrame = None
 
 class Keyframe(Component):
 
@@ -114,6 +115,7 @@ class AnimationComponents(Component):
     #Animation loop
     def animation_loop(self):
         #Filling MM1 with 4x4 identity matrices
+        global whichFrame
         self.MM = [np.eye(4) for _ in self.keyframe[0]]
 
         if (self.time_add >= self.time[1] and self.keyframe[2] is None) or (self.time_add >= self.time[2]):
@@ -121,12 +123,13 @@ class AnimationComponents(Component):
         elif self.time_add <= self.time[0]:
             self.flag = True
 
-
-        if self.time_add >= self.time[0] and self.time_add <= self.time[1]:
-            self.animation_for_loop(self.keyframe[0],self.keyframe[1], self.time[0], self.time[1])
-        elif self.time_add > self.time[1] and self.time_add <= self.time[2] and self.keyframe[2] is not None:
-            self.animation_for_loop(self.keyframe[1], self.keyframe[2], self.time[1], self.time[2])
-        
+        if self.anition_start == True:
+            if self.time_add >= self.time[0] and self.time_add <= self.time[1]:
+                self.animation_for_loop(self.keyframe[0],self.keyframe[1], self.time[0], self.time[1])
+            elif self.time_add > self.time[1] and self.time_add <= self.time[2] and self.keyframe[2] is not None:
+                self.animation_for_loop(self.keyframe[1], self.keyframe[2], self.time[1], self.time[2])
+        else:
+            self.MM = self.keyframe[whichFrame]
         
         #So we can have repeating animation
         if self.flag == True:
@@ -185,6 +188,7 @@ class AnimationComponents(Component):
     def drawSelfGui(self, imgui):
         global WW
         global WW_9
+        global whichFrame
 
         imgui.begin("Animation", True)
         _, self.tempo = imgui.drag_float("Alpha Tempo", self.tempo, 0.01, 0, 5)
@@ -193,6 +197,7 @@ class AnimationComponents(Component):
         i = 0
         for k in self.keyframe:
             if imgui.tree_node("Keyframe " + str(i)):
+                whichFrame = i
                 j = 0
                 for mm in k:
                     if imgui.tree_node("Joint " + str(j)):
@@ -218,7 +223,7 @@ class AnimationComponents(Component):
                             temp[2][3] = WW_9[i][j][2]
 
                             WW[i][j] = temp
-                            self.keyframe[i] = read_tree(figure,0,WW[i],True)
+                            self.keyframe[i] = read_tree(figure,3,WW[i],True)
 
                         imgui.tree_pop()
                     j += 1
@@ -304,7 +309,7 @@ def animation_initialize(file, ac, keyframe1, keyframe2, keyframe3 = None):
     
     # print(figure.rootnode)
 
-    mesh_id = 0
+    mesh_id = 3
 
     #Vertices, Incdices/Faces, Bones from the scene we loaded with pyassimp
     mesh = figure.meshes[mesh_id]
@@ -354,7 +359,7 @@ def animation_initialize(file, ac, keyframe1, keyframe2, keyframe3 = None):
 
     #print(M)
     #Initialising first keyframe
-    # M[1] = np.dot(np.diag([1,1,1,1]),M[1])
+    M[1] = np.dot(np.diag([1,1,1,1]),M[1])
     
     keyframe1.array_MM.append(read_tree(figure,mesh_id,M,transform))
     for i in range(0,len(WW_9[0])):
@@ -363,8 +368,8 @@ def animation_initialize(file, ac, keyframe1, keyframe2, keyframe3 = None):
         WW_9[0][i][6:9] = scale(keyframe1.array_MM[0][i])
 
     #Initialising second keyframe
-    # M[1][0:3,0:3] = eulerAnglesToRotationMatrix([0.3,0.3,0.4])
-    # M[1][0:3,3] = [0.5,0.5,0.5]
+    M[1][0:3,0:3] = eulerAnglesToRotationMatrix([0.3,0.3,0.4])
+    M[1][0:3,3] = [0.5,0.5,0.5]
 
     keyframe2.array_MM.append(read_tree(figure,mesh_id,M,transform))
     for i in range(0,len(WW_9[0])):
@@ -374,8 +379,8 @@ def animation_initialize(file, ac, keyframe1, keyframe2, keyframe3 = None):
 
 
     if keyframe3 != None:
-        # M[1][0:3,0:3] = eulerAnglesToRotationMatrix([-0.5,0.3,0.4])
-        # M[1][0:3,3] = [0.5,0.5,0.5]
+        M[1][0:3,0:3] = eulerAnglesToRotationMatrix([-0.5,0.3,0.4])
+        M[1][0:3,3] = [0.5,0.5,0.5]
         keyframe3.array_MM.append(read_tree(figure,mesh_id,M,transform))
         
         for i in range(0,len(WW_9[0])):
