@@ -21,11 +21,13 @@ from Elements.pyGLV.GL.Shader import InitGLShaderSystem, Shader, ShaderGLDecorat
 from Elements.pyGLV.GL.VertexArray import VertexArray
 from Elements.pyGLV.GL.Scene import Scene
 from Elements.pyGLV.GL.SimpleCamera import SimpleCamera
-from Elements.utils.normals import generateFlatNormalsMesh, generateNormals
+from Elements.utils.normals import generateFlatNormalsMesh,generateSmoothNormalsMesh, generateNormals, generateUniqueVertices
 from Elements.pyGLV.GL.Textures import Texture
+from Elements.pyGLV.GL.Textures import get_texture_faces
+from Elements.utils.terrain import generateTerrain
 from SkinnedAnimation import *
 from Elements.definitions import TEXTURE_DIR
-
+from OpenGL.GL import GL_LINES
 
 
 class Light(Entity):
@@ -175,10 +177,15 @@ def main(imguiFlag = False):
     pointLight.trans.trs = util.translate(0.8, 1, 1) @ util.scale(0.2)
     scene.world.addEntityChild(rootEntity, pointLight);
 
+    skybox = scene.world.createEntity(Entity(name="Skybox"))
+    scene.world.addEntityChild(rootEntity, skybox)
+    transSkybox = scene.world.addComponent(skybox, BasicTransform(name="transSkybox", trs=util.identity())) #util.identity()
+    meshSkybox = scene.world.addComponent(skybox, RenderMesh(name="meshSkybox"))
+
     #Spawn Animated AstroBoy
     node4 = scene.world.createEntity(Entity(name="Object"))
     scene.world.addEntityChild(rootEntity, node4)
-    trans4 = scene.world.addComponent(node4, BasicTransform(name="Object_TRS", trs=util.scale(0.2) @util.translate(0,0,0) ))
+    trans4 = scene.world.addComponent(node4, BasicTransform(name="Object_TRS", trs=util.scale(0.15) @util.translate(0,0,0) ))
     mesh4 = scene.world.addComponent(node4, RenderMesh(name="Object_mesh"))
     key1 = scene.world.addComponent(node4, Keyframe(name="Object_key_1"))
     key2 = scene.world.addComponent(node4, Keyframe(name="Object_key_2"))
@@ -199,7 +206,7 @@ def main(imguiFlag = False):
     #Generating normals
     #v, i, c, normals = generateFlatNormalsMesh(vertices , faces, colors)
     normals = generateNormals(vertices, faces)
-
+    # v, i, c, n = generateSmoothNormalsMesh(vertices, faces, colors)
     # testAnim = SkinnedAnimationSystem()
     # testAnim.keyframes = [key1.array_MM[0],key2.array_MM[0]]
     #print(testAnim.keyframes)
@@ -212,6 +219,35 @@ def main(imguiFlag = False):
     [1.0, 1.0],
     [0.0, 1.0]]
 
+
+    minbox = -320
+    maxbox = 320
+    vertexSkybox = np.array([
+        [minbox, minbox, maxbox, 1.0],
+        [minbox, maxbox, maxbox, 1.0],
+        [maxbox, maxbox, maxbox, 1.0],
+        [maxbox, minbox, maxbox, 1.0], 
+        [minbox, minbox, minbox, 1.0], 
+        [minbox, maxbox, minbox, 1.0], 
+        [maxbox, maxbox, minbox, 1.0], 
+        [maxbox, minbox, minbox, 1.0]
+    ],dtype=np.float32)
+
+    #index array for Skybox
+    indexSkybox = np.array((1,0,3, 1,3,2, 
+                    2,3,7, 2,7,6,
+                    3,0,4, 3,4,7,
+                    6,5,1, 6,1,2,
+                    4,5,6, 4,6,7,
+                    5,4,0, 5,0,1), np.uint32) 
+    
+    vertexSkybox, indexSkybox, _ = generateUniqueVertices(vertexSkybox,indexSkybox)
+
+    meshSkybox.vertex_attributes.append(vertexSkybox)
+    meshSkybox.vertex_index.append(indexSkybox)
+    vArraySkybox = scene.world.addComponent(skybox, VertexArray())
+    shaderSkybox = scene.world.addComponent(skybox, ShaderGLDecorator(Shader(vertex_source = Shader.STATIC_SKYBOX_VERT, fragment_source=Shader.STATIC_SKYBOX_FRAG)))
+
     #Passing vertices, colors, normals, bone weights, bone ids to the Shader
     mesh4.vertex_attributes.append(vertices)
     #mesh4.vertex_attributes.append(TEX_COORDINATES*int(len(i)/6))colors
@@ -223,6 +259,21 @@ def main(imguiFlag = False):
     vArray4 = scene.world.addComponent(node4, VertexArray())
     #shaderDec4 = scene.world.addComponent(node4, ShaderGLDecorator(Shader(vertex_source = Shader.ANIMATION_SIMPLE_TEXTURE_PHONG_VERT, fragment_source=Shader.SIMPLE_TEXTURE_PHONG_FRAG)))
     shaderDec4 = scene.world.addComponent(node4, ShaderGLDecorator(Shader(vertex_source = Shader.VERT_ANIMATION, fragment_source=Shader.FRAG_PHONG)))
+
+
+    # Generate terrain
+
+    vertexTerrain, indexTerrain, colorTerrain= generateTerrain(size=600,N=20)
+    # Add terrain
+    terrain = scene.world.createEntity(Entity(name="terrain"))
+    scene.world.addEntityChild(rootEntity, terrain)
+    terrain_trans = scene.world.addComponent(terrain, BasicTransform(name="terrain_trans", trs=util.identity()))
+    terrain_mesh = scene.world.addComponent(terrain, RenderMesh(name="terrain_mesh"))
+    terrain_mesh.vertex_attributes.append(vertexTerrain) 
+    terrain_mesh.vertex_attributes.append(colorTerrain)
+    terrain_mesh.vertex_index.append(indexTerrain)
+    terrain_vArray = scene.world.addComponent(terrain, VertexArray(primitive=GL_LINES))
+    terrain_shader = scene.world.addComponent(terrain, ShaderGLDecorator(Shader(vertex_source = Shader.COLOR_VERT_MVP, fragment_source=Shader.COLOR_FRAG)))
 
     # MAIN RENDERING LOOP
     running = True
@@ -282,6 +333,17 @@ def main(imguiFlag = False):
     # texture = Texture(texturePath)
     # shaderDec4.setUniformVariable(key='ImageTexture', value=texture, texture=True)
 
+    skybox_texture_locations = TEXTURE_DIR / "Skyboxes" / "Cloudy"
+    front_img = skybox_texture_locations / "front.jpg"
+    right_img = skybox_texture_locations / "right.jpg"
+    left_img = skybox_texture_locations / "left.jpg"
+    back_img = skybox_texture_locations / "back.jpg"
+    bottom_img = skybox_texture_locations / "bottom.jpg"
+    top_img = skybox_texture_locations / "top.jpg"
+
+    face_data = get_texture_faces(front_img,back_img,top_img,bottom_img,left_img,right_img)
+
+    shaderSkybox.setUniformVariable(key='cubemap', value=face_data, texture3D=True)
 
     shaderDec4.setUniformVariable(key='BB', value=ac.bones[0], arraymat4=True)
     shaderDec4.setUniformVariable(key='ambientColor', value=ambientLight.color, float3=True);
@@ -292,6 +354,8 @@ def main(imguiFlag = False):
 
     shaderDec4.setUniformVariable(key='shininess',value=Mshininess,float1=True)
     shaderDec4.setUniformVariable(key='matColor',value=Mcolor,float3=True)
+
+    model_terrain = terrain.getChild(0).trs
 
     # pointLight.trans.trs = util.scale(0.2)
     while running:
@@ -305,6 +369,12 @@ def main(imguiFlag = False):
         #for i in [1,2]:
 
         MM = testAnim.apply2AnimationComponents(ac)
+
+        shaderSkybox.setUniformVariable(key='Proj', value=trans4.l2cam, mat4=True)
+        shaderSkybox.setUniformVariable(key='View', value=trans4.l2world, mat4=True)
+
+        mvp_terrain = trans4.l2cam @ trans4.l2world @ model_terrain
+        terrain_shader.setUniformVariable(key='modelViewProj', value=mvp_terrain, mat4=True)
 
         #print(MM)
         shaderDec4.setUniformVariable(key='modelViewProj', value=trans4.l2cam, mat4=True);

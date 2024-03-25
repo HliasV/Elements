@@ -123,13 +123,14 @@ class AnimationComponents(Component):
         elif self.time_add <= self.time[0]:
             self.flag = True
 
-        if self.anition_start == True:
+        if self.anition_start == False and whichFrame is not None:
+            self.MM = self.keyframe[whichFrame]
+        else:
             if self.time_add >= self.time[0] and self.time_add <= self.time[1]:
                 self.animation_for_loop(self.keyframe[0],self.keyframe[1], self.time[0], self.time[1])
             elif self.time_add > self.time[1] and self.time_add <= self.time[2] and self.keyframe[2] is not None:
                 self.animation_for_loop(self.keyframe[1], self.keyframe[2], self.time[1], self.time[2])
-        else:
-            self.MM = self.keyframe[whichFrame]
+
         
         #So we can have repeating animation
         if self.flag == True:
@@ -197,7 +198,10 @@ class AnimationComponents(Component):
         i = 0
         for k in self.keyframe:
             if imgui.tree_node("Keyframe " + str(i)):
-                whichFrame = i
+                if self.anition_start == False:
+                    whichFrame = i
+                else:
+                    whichFrame = None
                 j = 0
                 for mm in k:
                     if imgui.tree_node("Joint " + str(j)):
